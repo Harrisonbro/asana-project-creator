@@ -11,6 +11,11 @@ end
 
 # Ask user to choose a workspace
 workspaces = Asana::Workspace.all
-workspaces.each { |workspace|
-    p workspace.name
+puts "Which workspace should this project be created in?"
+puts "  (type your chosen number, then press enter)"
+workspaces.each_with_index { |workspace, index|
+    puts "  [#{index}] #{workspace.name}"
 }
+workspace_index = gets
+workspace = workspaces[workspace_index.to_i]
+puts "OK, creating project in the #{workspace.name} workspace"

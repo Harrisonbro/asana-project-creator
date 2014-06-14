@@ -1,15 +1,21 @@
+#
 # Dependencies
+#
 require 'json'
 require 'Asana'
 
+#
 # Configuration
+#
 config = JSON.parse(File.read('config.json'))
 
 Asana.configure do |client|
   client.api_key = config['api_key']
 end
 
+#
 # Ask user to choose a workspace
+#
 workspaces = Asana::Workspace.all
 puts "Which workspace should this project be created in?\n\n"
 workspaces.each_with_index { |workspace, index|

@@ -1,8 +1,13 @@
 #
 # Dependencies
 #
+require 'pp'
 require 'yaml'
 require 'Asana'
+
+#
+# Kickoff
+#
 
 puts "Starting Asana Project Creator."
 puts "Press Ctrl+Z at any time to force-quit the script."
@@ -45,14 +50,11 @@ end
 
 workspace = ask_for_workspace(workspaces)
 
-puts workspace.id
-
 puts "\nOK, creating project in the #{workspace.name} workspace"
 
 #
 # Ask user to choose template
 #
-
 templates = []
 Dir.glob("templates/**.yaml") { |entry|
     template = YAML.load_file(entry)
@@ -134,5 +136,31 @@ year = ask_for_year()
 month = ask_for_month()
 day = ask_for_day()
 
-template_date = Time.new(year, month, day)
-puts "\nOK, creating tasks relative to #{template_date.strftime('%A %-d %b %Y')}"
+relative_date = Date.new(year, month, day)
+puts "\nOK, creating tasks relative to #{relative_date.strftime('%A %-d %b %Y')}"
+
+#
+# Build up dates on tasks to be created
+#
+template['tasks'].each { |task|
+    task['date'] = relative_date + task['days'].to_i
+}
+
+puts "\nRight, we'll create a project called '#{template['template_name']}'"
+puts "in the #{workspace.name} workspace with the following tasks:"
+puts "-----------------------------------------------------------------------"
+
+template['tasks'].each { |task|
+    puts "- #{task['title']}"
+    puts "  Due on: #{task['date'].strftime('%A %-d %b %Y')}"
+}
+
+puts "-----------------------------------------------------------------------"
+
+#
+# Create the tasks
+#
+puts "\nTelling Asana to create the tasks (this may take a minute or two).....\n\n"
+
+# workspace.create_project(:name => "test project name", :workspace => workspace.id)
+# workspace.create_task(:name => "test task name")

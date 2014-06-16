@@ -1,0 +1,6 @@
+template_name: My test template
+tasks:
+    - title: test task one
+      days: -2
+    - title: test task two
+      days: -1

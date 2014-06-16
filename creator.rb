@@ -4,6 +4,9 @@
 require 'yaml'
 require 'Asana'
 
+puts "Starting Asana Project Creator."
+puts "Press Ctrl+Z at any time to force-quit the script."
+
 #
 # Configuration
 #
@@ -13,7 +16,7 @@ Asana.configure do |client|
   client.api_key = config['api_key']
 end
 
-puts "Talking to Asana..."
+puts "Talking to Asana....."
 
 #
 # Ask user to choose a workspace
@@ -79,3 +82,57 @@ end
 template = ask_for_template(templates)
 
 puts "\nOK, creating a new project from the #{template['template_name']} template"
+
+#
+# Ask for date
+#
+puts "\nWhat date should the template's tasks be created relative to?\n\n"
+
+def ask_for_year()
+    puts "→ Year: (eg. #{Time.now.year})"
+
+    year = String(gets.gsub("\n",'')) rescue -1
+    year_int = Integer(year) rescue -1
+
+    if year == -1 || year.size != 4 || year_int < 0
+        puts "\nPlease type the year as a 4-digit number (eg. #{Time.now.year})"
+        ask_for_year()
+    else
+        return year.to_i
+    end
+end
+
+def ask_for_month()
+    puts "→ Month: (eg. #{Time.now.strftime '%m'})"
+
+    month = String(gets.gsub("\n",'')) rescue -1
+    month_int = Integer(month) rescue -1
+
+    if month == -1 || month.size != 2 || month_int < 0
+        puts "\nPlease type the month as a 2-digit number (eg. #{Time.now.strftime '%m'})"
+        ask_for_month()
+    else
+        return month.to_i
+    end
+end
+
+def ask_for_day()
+    puts "→ Day: (eg. #{Time.now.strftime '%d'})"
+
+    day = String(gets.gsub("\n",'')) rescue -1
+    day_int = Integer(day) rescue -1
+
+    if day == -1 || day.size != 2 || day_int < 0
+        puts "\nPlease type the day as a 2-digit number (eg. #{Time.now.strftime '%d'})"
+        ask_for_day()
+    else
+        return day.to_i
+    end
+end
+
+year = ask_for_year()
+month = ask_for_month()
+day = ask_for_day()
+
+template_date = Time.new(year, month, day)
+puts "\nOK, creating tasks relative to #{template_date.strftime('%A %-d %b %Y')}"

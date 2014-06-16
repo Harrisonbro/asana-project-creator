@@ -4,63 +4,63 @@
 require 'yaml'
 require 'Asana'
 
-# #
-# # Configuration
-# #
-# config = YAML.load_file('config.yaml')
+#
+# Configuration
+#
+config = YAML.load_file('config.yaml')
 
-# Asana.configure do |client|
-#   client.api_key = config['api_key']
-# end
+Asana.configure do |client|
+  client.api_key = config['api_key']
+end
 
-# puts "Talking to Asana..."
+puts "Talking to Asana..."
 
-# #
-# # Ask user to choose a workspace
-# #
-# workspaces = Asana::Workspace.all
+#
+# Ask user to choose a workspace
+#
+workspaces = Asana::Workspace.all
 
-# puts "Which workspace should this project be created in?\n\n"
+puts "Which workspace should this project be created in?\n\n"
 
-# def ask_for_workspace(workspaces)
-#     workspaces.each_with_index { |workspace, index|
-#         puts "  [#{index}] #{workspace.name} (id: #{workspace.id})"
-#     }
+def ask_for_workspace(workspaces)
+    workspaces.each_with_index { |workspace, index|
+        puts "  [#{index}] #{workspace.name} (id: #{workspace.id})"
+    }
 
-#     puts "\n→ Type your choice and press enter..."
+    puts "\n→ Type your choice and press enter..."
 
-#     workspace_index = Integer(gets) rescue -1
+    workspace_index = Integer(gets) rescue -1
 
-#     if workspace_index < 0 || workspaces[workspace_index].nil?
-#         puts "Your answer wasn't valid. Please choose from the following options:\n\n"
-#         ask_for_workspace(workspaces)
-#     else
-#         workspace = workspaces[workspace_index]
-#         return workspace
-#     end
-# end
+    if workspace_index < 0 || workspaces[workspace_index].nil?
+        puts "Your answer wasn't valid. Please choose from the following options:\n\n"
+        ask_for_workspace(workspaces)
+    else
+        workspace = workspaces[workspace_index]
+        return workspace
+    end
+end
 
-# workspace = ask_for_workspace(workspaces)
+workspace = ask_for_workspace(workspaces)
 
-# puts workspace.id
+puts workspace.id
 
-# puts "\nOK, creating project in the #{workspace.name} workspace"
+puts "\nOK, creating project in the #{workspace.name} workspace"
 
 #
 # Ask user to choose template
 #
 
-templates = Hash.new
+templates = []
 Dir.glob("templates/**.yaml") { |entry|
     template = YAML.load_file(entry)
-    templates[template['template_name']] = template
+    templates << template
 }
 
 puts "Which project template do you want to use?\n\n"
 
 def ask_for_template(templates)
     templates.each_with_index { |template, index|
-        puts "  [#{index}] #{template.template_name}"
+        puts "  [#{index}] #{template['template_name']}"
     }
 
     puts "\n→ Type your choice and press enter..."
@@ -69,7 +69,7 @@ def ask_for_template(templates)
 
     if template_index < 0 || templates[template_index].nil?
         puts "Your answer wasn't valid. Please choose from the following options:\n\n"
-        ask_for_workspace(templates)
+        ask_for_template(templates)
     else
         template = templates[template_index]
         return template
@@ -78,6 +78,4 @@ end
 
 template = ask_for_template(templates)
 
-puts template.id
-
-puts "\nOK, creating a new project from #{template.template_name}"
+puts "\nOK, creating a new project from the #{template['template_name']} template"

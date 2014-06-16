@@ -1,6 +1,11 @@
 template_name: My Example
 tasks:
-    - title: test task one
+    - title: Test Task One
       days: -2
-    - title: test task two
+      description: Description one
+    - title: Test Task Two
       days: -1
+      description: Description two
+    - title: Test Task Three
+      days: 4
+      description: Description three

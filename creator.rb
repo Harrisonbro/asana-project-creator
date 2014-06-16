@@ -27,10 +27,14 @@ puts "Talking to Asana....."
 # Ask user to choose a workspace
 #
 workspaces = Asana::Workspace.find(:all, :params => { :opt_fields => "name, is_organization" })
+workspaces = workspaces.elements
 
 # Remove "Personal Projects" workspace from options
-puts workspaces.class
-exit
+workspaces.each_with_index { |workspace, index|
+    if workspace.name == "Personal Projects"
+        workspaces.delete_at(index)
+    end
+}
 
 puts "Which workspace should this project be created in?\n\n"
 

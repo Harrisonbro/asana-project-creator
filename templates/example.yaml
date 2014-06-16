@@ -1,4 +1,4 @@
-template_name: My test template
+template_name: My Example
 tasks:
     - title: test task one
       days: -2

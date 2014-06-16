@@ -26,13 +26,17 @@ puts "Talking to Asana....."
 #
 # Ask user to choose a workspace
 #
-workspaces = Asana::Workspace.all
+workspaces = Asana::Workspace.find(:all, :params => { :opt_fields => "name, is_organization" })
+
+# Remove "Personal Projects" workspace from options
+puts workspaces.class
+exit
 
 puts "Which workspace should this project be created in?\n\n"
 
 def ask_for_workspace(workspaces)
     workspaces.each_with_index { |workspace, index|
-        puts "  [#{index}] #{workspace.name} (id: #{workspace.id})"
+        puts "  [#{index}] #{workspace.name} (id: #{workspace.id}, isorg: #{workspace.is_organization})"
     }
 
     puts "\n→ Type your choice and press enter..."

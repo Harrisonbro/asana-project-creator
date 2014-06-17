@@ -2,13 +2,17 @@ template_name: My Example
 tasks:
     - title: Test Task One
       days: -2
-      description: Description one
+      notes: Description one
       assignee:
     - title: Test Task Two
       days: -1
-      description: Description two
-      assignee: 257500294287
+      notes: Description two
+      assignee: 123456789012
     - title: Test Task Three
-      days: 4
-      description: Description three
+      days: 0
+      notes: Description three
+      assignee:
+    - title: Test Task Four
+      days: 1
+      notes: Description four
       assignee:

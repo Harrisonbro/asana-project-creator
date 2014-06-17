@@ -260,7 +260,12 @@ project = workspace.create_project(:name => project_name, :team => team['id'])
 puts "Created #{project.name}..."
 
 template['tasks'].each_with_index { |task, index|
-    newtask = workspace.create_task(:name => task['title'], :assignee => task['assignee'])
+    newtask = workspace.create_task(
+        :name => task['title'],
+        :assignee => task['assignee'],
+        :notes => task['notes'],
+        :due_on => task['date'].strftime('%Y-%m-%d')
+    )
     newtask.add_project(project.id)
     puts "Created #{task['title']}..."
 }

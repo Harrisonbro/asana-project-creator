@@ -4,6 +4,7 @@
 require 'pp'
 require 'yaml'
 require 'Asana'
+require 'typhoeus'
 
 #
 # Kickoff
@@ -40,7 +41,7 @@ puts "Which workspace should this project be created in?\n\n"
 
 def ask_for_workspace(workspaces)
     workspaces.each_with_index { |workspace, index|
-        puts "  [#{index}] #{workspace.name} (id: #{workspace.id}, isorg: #{workspace.is_organization})"
+        puts "  [#{index}] #{workspace.name} (id: #{workspace.id})"
     }
 
     puts "\n→ Type your choice and press enter..."
@@ -59,6 +60,73 @@ end
 workspace = ask_for_workspace(workspaces)
 
 puts "\nOK, creating project in the #{workspace.name} workspace"
+
+#
+# Ask user to choose team to create in
+#
+
+if workspace.is_organization
+    puts "Asking Asana about this workspace's teams....."
+
+    request = Typhoeus::Request.new(
+        "https://app.asana.com/api/1.0/organizations/#{workspace.id}/teams",
+        method: :get,
+        userpwd: "#{config['api_key']}:"
+    )
+
+    request.on_complete do |response|
+        if response.success?
+            # hell yeah
+        elsif response.timed_out?
+            # aw hell no
+            log("got a time out")
+        elsif response.code == 0
+            # Could not get an http response, something's wrong.
+            log(response.return_message)
+        else
+            # Received a non-successful http response.
+            puts "Sorry, something went wrong with the API request (returned response code #{response.code.to_s})"
+            exit
+        end
+    end
+
+    request.run
+    response = request.response
+
+    response = JSON.parse(response.body)
+    teams = response['data']
+
+    if teams.size == 0
+        puts "\nHmm, looks like you don't have any teams in the #{workspace.name} workspace, but that workspace is an Asana 'organization' so you need to first create a team within it before we can carry on. Do that and then come back!"
+        exit
+    else
+        puts "\nWhich team within #{workspace.name} should we create the project in?\n\n"
+
+        def ask_for_team(teams)
+            teams.each_with_index { |team, index|
+                puts "  [#{index}] #{team['name']} (id: #{team['id']})"
+            }
+
+            puts "\n→ Type your choice and press enter..."
+
+            team_index = Integer(gets) rescue -1
+
+            if team_index < 0 || teams[team_index].nil?
+                puts "Your answer wasn't valid. Please choose from the following options:\n\n"
+                ask_for_team(teams)
+            else
+                team = teams[team_index]
+                return team
+            end
+        end
+
+        team = ask_for_team(teams)
+
+        puts "\nOK, creating within the '#{team['name']}' team"
+    end
+end
+
+workspace.create_project(:name => 'Upgrade Asana gem', :team => team['id'])
 
 #
 # Ask user to choose template

@@ -1,6 +1,7 @@
 #
 # Dependencies
 #
+require 'date'
 require 'pp'
 require 'yaml'
 require 'Asana'
@@ -59,7 +60,22 @@ end
 
 workspace = ask_for_workspace(workspaces)
 
-puts "\nOK, creating project in the #{workspace.name} workspace"
+puts "\nOK, we'll create this project in the #{workspace.name} workspace"
+
+#
+# Show users in workspace
+#
+
+puts "Asking Asana about your workspace's users...."
+users = workspace.users
+
+puts "\nThe users in this workspace are:"
+
+users.each { |user|
+    puts "- #{user.name} (id: #{user.id})"
+}
+
+puts "\nYou can use these user IDs in the project templates to assign tasks to users. Make sure you always create a template in the right workspace/team (or invite these users into your workspaces/teams) so the user(s) are available to have tasks assigned to them. To leave a task unassigned just leave the task's assignee field in the template blank."
 
 #
 # Ask user to choose team to create in
@@ -125,8 +141,6 @@ if workspace.is_organization
         puts "\nOK, creating within the '#{team['name']}' team"
     end
 end
-
-workspace.create_project(:name => 'Upgrade Asana gem', :team => team['id'])
 
 #
 # Ask user to choose template
@@ -222,8 +236,11 @@ template['tasks'].each { |task|
     task['date'] = relative_date + task['days'].to_i
 }
 
-puts "\nRight, we'll create a project called '#{template['template_name']}'"
-puts "in the #{workspace.name} workspace with the following tasks:"
+puts "\nOK, nearly there. Finally, what should this project be called?"
+
+project_name = gets.gsub("\n",'')
+
+puts "\nRight, we'll create a project called '#{project_name}' in the #{workspace.name} workspace with the following tasks:"
 puts "-----------------------------------------------------------------------"
 
 template['tasks'].each { |task|
@@ -236,7 +253,19 @@ puts "-----------------------------------------------------------------------"
 #
 # Create the tasks
 #
+
 puts "\nTelling Asana to create the tasks (this may take a minute or two).....\n\n"
 
-# workspace.create_project(:name => "test project name", :workspace => workspace.id)
-# workspace.create_task(:name => "test task name")
+project = workspace.create_project(:name => project_name, :team => team['id'])
+puts "Created #{project.name}..."
+
+template['tasks'].each_with_index { |task, index|
+    newtask = workspace.create_task(:name => task['title'], :assignee => task['assignee'])
+    newtask.add_project(project.id)
+    puts "Created #{task['title']}..."
+}
+
+puts "\nAll done!!"
+project_url = "https://app.asana.com/0/#{project.id}/#{project.id}"
+puts "The project's URL should be #{project_url}"
+system("open #{project_url}")

@@ -3,9 +3,12 @@ tasks:
     - title: Test Task One
       days: -2
       description: Description one
+      assignee:
     - title: Test Task Two
       days: -1
       description: Description two
+      assignee: 257500294287
     - title: Test Task Three
       days: 4
       description: Description three
+      assignee:

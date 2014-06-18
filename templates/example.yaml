@@ -1,4 +1,4 @@
-template_name: My Example
+template_name: My Example Project
 tasks:
     - title: Test Task One
       days: -2

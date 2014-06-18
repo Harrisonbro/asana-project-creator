@@ -82,7 +82,7 @@ puts "\nYou can use these user IDs in the project templates to assign tasks to u
 #
 
 if workspace.is_organization
-    puts "Asking Asana about this workspace's teams....."
+    puts "\nAsking Asana about this workspace's teams....."
 
     request = Typhoeus::Request.new(
         "https://app.asana.com/api/1.0/organizations/#{workspace.id}/teams",
@@ -232,20 +232,55 @@ puts "\nOK, creating tasks relative to #{relative_date.strftime('%A %-d %b %Y')}
 #
 # Build up dates on tasks to be created
 #
+
+def create_date_field(task, relative_date)
+    if task.has_key?('days')
+        task['date'] = relative_date + task['days'].to_i
+    end
+
+    if task.has_key?('subtasks') && task['subtasks'].any?
+        task['subtasks'].each { |subtask|
+            create_date_field(subtask, relative_date)
+        }
+    end
+end
+
 template['tasks'].each { |task|
-    task['date'] = relative_date + task['days'].to_i
+    create_date_field(task, relative_date)
 }
 
-puts "\nOK, nearly there. Finally, what should this project be called?"
+puts "\n→ What should this project be called?"
 
 project_name = gets.gsub("\n",'')
 
 puts "\nRight, we'll create a project called '#{project_name}' in the #{workspace.name} workspace with the following tasks:"
 puts "-----------------------------------------------------------------------"
 
+def put_task_to_console(task, indent=0)
+    indentation = "  "
+    task_name = "- #{task['title']}"
+    indent.times {
+        task_name = indentation + task_name
+    }
+    puts task_name
+
+    if task.has_key?('date')
+        task_date = "  (due on: #{task['date'].strftime('%A %-d %b %Y')})"
+        indent.times {
+            task_date = indentation + task_date
+        }
+        puts task_date
+    end
+
+    if task.has_key?('subtasks') && task['subtasks'].any?
+        task['subtasks'].each { |subtask|
+            put_task_to_console(subtask, indent.next)
+        }
+    end
+end
+
 template['tasks'].each { |task|
-    puts "- #{task['title']}"
-    puts "  Due on: #{task['date'].strftime('%A %-d %b %Y')}"
+    put_task_to_console(task)
 }
 
 puts "-----------------------------------------------------------------------"
@@ -263,22 +298,56 @@ else
 end
 puts "Created #{project.name}..."
 
-def create_task(task, workspace, project)
-    newtask = workspace.create_task(
-        :name => task['title'],
-        :assignee => task['assignee'],
-        :notes => task['notes'],
-        :due_on => task['date'].strftime('%Y-%m-%d')
-    )
+def create_new_task(task, workspace, project, parent_id=nil)
+    task_data = {}
+
+    if task.has_key?('title') && task['title'].is_a?(String)
+        if task['title'].strip.empty?
+            puts "One of your tasks didn't have a name so couldn't be created"
+        else
+            task_data[:name] = task['title']
+        end
+    else
+        puts "One of your tasks didn't have a name so couldn't be created"
+        return
+    end
+
+    if task.has_key?('assignee')
+        task_data[:assignee] = task['assignee'] rescue ""
+    end
+
+    if task.has_key?('notes')
+        task_data[:notes] = task['notes']
+    end
+
+    if task.has_key?('date') && task['date'].is_a?(Date)
+        task_data[:due_on] = task['date'].strftime('%Y-%m-%d')
+    end
+
+    unless parent_id.nil?
+        task_data[:parent] = parent_id
+    end
+
+    newtask = workspace.create_task(task_data)
     newtask.add_project(project.id)
+
+    puts "Created #{task['title']}..."
+
+    if task.has_key?('subtasks') && task['subtasks'].any?
+        task['subtasks'].each { |subtask|
+            create_new_task(subtask, workspace, project, newtask.id)
+        }
+    end
 end
 
 template['tasks'].each_with_index { |task, index|
-    create_task(task, workspace, project)
-    puts "Created #{task['title']}..."
+    create_new_task(task, workspace, project)
 }
 
 puts "\nAll done!!"
+
+exit
+
 project_url = "https://app.asana.com/0/#{project.id}/#{project.id}"
 puts "The project's URL should be #{project_url}"
 system("open #{project_url}")

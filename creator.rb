@@ -263,7 +263,7 @@ else
 end
 puts "Created #{project.name}..."
 
-template['tasks'].each_with_index { |task, index|
+def create_task(task, workspace, project)
     newtask = workspace.create_task(
         :name => task['title'],
         :assignee => task['assignee'],
@@ -271,6 +271,10 @@ template['tasks'].each_with_index { |task, index|
         :due_on => task['date'].strftime('%Y-%m-%d')
     )
     newtask.add_project(project.id)
+end
+
+template['tasks'].each_with_index { |task, index|
+    create_task(task, workspace, project)
     puts "Created #{task['title']}..."
 }
 

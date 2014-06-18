@@ -5,7 +5,7 @@ A simple command-line tool to create Asana projects from a template.
 ### Installation
 Asana Project Creator requires [`asana-ruby`](https://rubygems.org/gems/asana-ruby) and [`typhoeus`](https://github.com/typhoeus/typhoeus). To install, run `sudo gem install asana-ruby typhoeus`.
 
-You'll also need to create a config file. Copy `config.sample.rb` to `config.rb` and add your [API key](http://app.asana.com/-/account_api) and other details.
+You'll also need to create a config file. Copy `config.sample.yaml` to `config.yaml` and add your [API key](http://app.asana.com/-/account_api) and other details.
 
 ### Usage
 First create your template(s) within the `templates` director. Use `templates/example.rb` as a starting point.

@@ -256,7 +256,11 @@ puts "-----------------------------------------------------------------------"
 
 puts "\nTelling Asana to create the tasks (this may take a minute or two).....\n\n"
 
-project = workspace.create_project(:name => project_name, :team => team['id'])
+if workspace.is_organization
+    project = workspace.create_project(:name => project_name, :team => team['id'])
+else
+    project = workspace.create_project(:name => project_name)
+end
 puts "Created #{project.name}..."
 
 template['tasks'].each_with_index { |task, index|

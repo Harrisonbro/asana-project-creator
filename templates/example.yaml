@@ -3,16 +3,8 @@ tasks:
     - title: Test Task One
       days: -2
       notes: Description one
-      assignee: 4710103734623
+      assignee:
     - title: Test Task Two
       days: -1
       notes: Description two
-      assignee: 4710106026503
-    - title: Test Task Three
-      days: 0
-      notes: Description three
-      assignee:
-    - title: Test Task Four
-      days: 1
-      notes: Description four
       assignee:

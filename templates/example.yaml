@@ -1,11 +1,10 @@
-template_name: My Example
+template_name: My Example Project
 tasks:
     - title: Test Task One
       days: -2
-      description: Description one
+      notes: Description one
+      assignee:
     - title: Test Task Two
       days: -1
-      description: Description two
-    - title: Test Task Three
-      days: 4
-      description: Description three
+      notes: Description two
+      assignee:

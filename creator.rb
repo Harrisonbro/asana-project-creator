@@ -1,9 +1,11 @@
 #
 # Dependencies
 #
+require 'date'
 require 'pp'
 require 'yaml'
 require 'Asana'
+require 'typhoeus'
 
 #
 # Kickoff
@@ -58,7 +60,87 @@ end
 
 workspace = ask_for_workspace(workspaces)
 
-puts "\nOK, creating project in the #{workspace.name} workspace"
+puts "\nOK, we'll create this project in the #{workspace.name} workspace"
+
+#
+# Show users in workspace
+#
+
+puts "Asking Asana about your workspace's users...."
+users = workspace.users
+
+puts "\nThe users in this workspace are:"
+
+users.each { |user|
+    puts "- #{user.name} (id: #{user.id})"
+}
+
+puts "\nYou can use these user IDs in the project templates to assign tasks to users. Make sure you always create a template in the right workspace/team (or invite these users into your workspaces/teams) so the user(s) are available to have tasks assigned to them. To leave a task unassigned just leave the task's assignee field in the template blank."
+
+#
+# Ask user to choose team to create in
+#
+
+if workspace.is_organization
+    puts "\nAsking Asana about this workspace's teams....."
+
+    request = Typhoeus::Request.new(
+        "https://app.asana.com/api/1.0/organizations/#{workspace.id}/teams",
+        method: :get,
+        userpwd: "#{config['api_key']}:"
+    )
+
+    request.on_complete do |response|
+        if response.success?
+            # hell yeah
+        elsif response.timed_out?
+            # aw hell no
+            log("got a time out")
+        elsif response.code == 0
+            # Could not get an http response, something's wrong.
+            log(response.return_message)
+        else
+            # Received a non-successful http response.
+            puts "Sorry, something went wrong with the API request (returned response code #{response.code.to_s})"
+            exit
+        end
+    end
+
+    request.run
+    response = request.response
+
+    response = JSON.parse(response.body)
+    teams = response['data']
+
+    if teams.size == 0
+        puts "\nHmm, looks like you don't have any teams in the #{workspace.name} workspace, but that workspace is an Asana 'organization' so you need to first create a team within it before we can carry on. Do that and then come back!"
+        exit
+    else
+        puts "\nWhich team within #{workspace.name} should we create the project in?\n\n"
+
+        def ask_for_team(teams)
+            teams.each_with_index { |team, index|
+                puts "  [#{index}] #{team['name']} (id: #{team['id']})"
+            }
+
+            puts "\n→ Type your choice and press enter..."
+
+            team_index = Integer(gets) rescue -1
+
+            if team_index < 0 || teams[team_index].nil?
+                puts "Your answer wasn't valid. Please choose from the following options:\n\n"
+                ask_for_team(teams)
+            else
+                team = teams[team_index]
+                return team
+            end
+        end
+
+        team = ask_for_team(teams)
+
+        puts "\nOK, creating within the '#{team['name']}' team"
+    end
+end
 
 #
 # Ask user to choose template
@@ -150,17 +232,55 @@ puts "\nOK, creating tasks relative to #{relative_date.strftime('%A %-d %b %Y')}
 #
 # Build up dates on tasks to be created
 #
+
+def create_date_field(task, relative_date)
+    if task.has_key?('days')
+        task['date'] = relative_date + task['days'].to_i
+    end
+
+    if task.has_key?('subtasks') && task['subtasks'].any?
+        task['subtasks'].each { |subtask|
+            create_date_field(subtask, relative_date)
+        }
+    end
+end
+
 template['tasks'].each { |task|
-    task['date'] = relative_date + task['days'].to_i
+    create_date_field(task, relative_date)
 }
 
-puts "\nRight, we'll create a project called '#{template['template_name']}'"
-puts "in the #{workspace.name} workspace with the following tasks:"
+puts "\n→ What should this project be called?"
+
+project_name = gets.gsub("\n",'')
+
+puts "\nRight, we'll create a project called '#{project_name}' in the #{workspace.name} workspace with the following tasks:"
 puts "-----------------------------------------------------------------------"
 
+def put_task_to_console(task, indent=0)
+    indentation = "  "
+    task_name = "- #{task['title']}"
+    indent.times {
+        task_name = indentation + task_name
+    }
+    puts task_name
+
+    if task.has_key?('date')
+        task_date = "  (due on: #{task['date'].strftime('%A %-d %b %Y')})"
+        indent.times {
+            task_date = indentation + task_date
+        }
+        puts task_date
+    end
+
+    if task.has_key?('subtasks') && task['subtasks'].any?
+        task['subtasks'].each { |subtask|
+            put_task_to_console(subtask, indent.next)
+        }
+    end
+end
+
 template['tasks'].each { |task|
-    puts "- #{task['title']}"
-    puts "  Due on: #{task['date'].strftime('%A %-d %b %Y')}"
+    put_task_to_console(task)
 }
 
 puts "-----------------------------------------------------------------------"
@@ -170,5 +290,63 @@ puts "-----------------------------------------------------------------------"
 #
 puts "\nTelling Asana to create the tasks (this may take a minute or two).....\n\n"
 
-# workspace.create_project(:name => "test project name", :workspace => workspace.id)
-# workspace.create_task(:name => "test task name")
+if workspace.is_organization
+    project = workspace.create_project(:name => project_name, :team => team['id'])
+else
+    project = workspace.create_project(:name => project_name)
+end
+puts "Created #{project.name}..."
+
+def create_new_task(task, workspace, project, parent_id=nil)
+    task_data = {}
+
+    if task.has_key?('title') && task['title'].is_a?(String)
+        if task['title'].strip.empty?
+            puts "One of your tasks didn't have a name so couldn't be created"
+        else
+            task_data[:name] = task['title']
+        end
+    else
+        puts "One of your tasks didn't have a name so couldn't be created"
+        return
+    end
+
+    if task.has_key?('assignee')
+        task_data[:assignee] = task['assignee'] rescue ""
+    end
+
+    if task.has_key?('notes')
+        task_data[:notes] = task['notes']
+    end
+
+    if task.has_key?('date') && task['date'].is_a?(Date)
+        task_data[:due_on] = task['date'].strftime('%Y-%m-%d')
+    end
+
+    unless parent_id.nil?
+        task_data[:parent] = parent_id
+    end
+
+    newtask = workspace.create_task(task_data)
+    newtask.add_project(project.id)
+
+    puts "Created #{task['title']}..."
+
+    if task.has_key?('subtasks') && task['subtasks'].any?
+        task['subtasks'].each { |subtask|
+            create_new_task(subtask, workspace, project, newtask.id)
+        }
+    end
+end
+
+template['tasks'].each_with_index { |task, index|
+    create_new_task(task, workspace, project)
+}
+
+puts "\nAll done!!"
+
+exit
+
+project_url = "https://app.asana.com/0/#{project.id}/#{project.id}"
+puts "The project's URL should be #{project_url}"
+system("open #{project_url}")
